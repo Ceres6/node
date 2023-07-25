@@ -115,9 +115,10 @@ void PrintTree(const FSPermission::RadixTree::Node* node, size_t spaces = 0) {
 
 // allow = '*'
 // allow = '/tmp/,/home/example.js'
-void FSPermission::Apply(const std::string& allow, PermissionScope scope) {
+void FSPermission::Apply(const std::string& allow, PermissionScope scope, const std::unordered_map<std::string, std::string>& options) {
   using std::string_view_literals::operator""sv;
-  for (const std::string_view res : SplitString(allow, ","sv)) {
+  std::string delimiter = options.find("delimiter") != options.end() ? options.at("delimiter") : ",";
+  for (const std::string_view res : SplitString(allow, delimiter)) {
     if (res == "*"sv) {
       if (scope == PermissionScope::kFileSystemRead) {
         deny_all_in_ = false;
