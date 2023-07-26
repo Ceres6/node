@@ -996,6 +996,21 @@ class RAIIIsolate {
   v8::Isolate::Scope isolate_scope_;
 };
 
+class Environment;
+
+#ifdef _WIN32
+bool IsWindowsDeviceRoot(const char c);
+#endif
+
+bool IsPathSeparator(const char c);
+
+std::string NormalizeString(const std::string path,
+                            bool allowAboveRoot,
+                            const std::string separator);
+
+std::string PathResolve(Environment* env,
+                        const std::vector<std::string_view>& args);
+
 }  // namespace node
 
 #endif  // defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
