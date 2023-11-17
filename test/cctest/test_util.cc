@@ -305,7 +305,7 @@ TEST_F(UtilTest, SPrintF) {
   EXPECT_EQ(SPrintF("%s", with_zero), with_zero);
 }
 
-TEST(UtilTest, DumpJavaScriptStackWithNoIsolate) {
+TEST_F(UtilTest, DumpJavaScriptStackWithNoIsolate) {
   node::DumpJavaScriptBacktrace(stderr);
 }
 
@@ -313,6 +313,7 @@ TEST_F(UtilTest, PathResolve) {
   const v8::HandleScope handle_scope(isolate_);
   Argv argv;
   Env env{handle_scope, argv, node::EnvironmentFlags::kNoBrowserGlobals};
+  auto cwd = (*env)->GetCwd((*env)->exec_path());
 #ifdef _WIN32
   EXPECT_EQ(PathResolve(*env, {"c:/blah\\blah", "d:/games", "c:../a"}),
             "c:\\blah\\a");
@@ -321,7 +322,7 @@ TEST_F(UtilTest, PathResolve) {
   EXPECT_EQ(PathResolve(*env, {"c:/ignore", "c:/some/file"}), "c:\\some\\file");
   EXPECT_EQ(PathResolve(*env, {"d:/ignore", "d:some/dir//"}),
             "d:\\ignore\\some\\dir");
-  EXPECT_EQ(PathResolve(*env, {"."}), (*env)->GetCwd((*env)->exec_path()));
+  EXPECT_EQ(PathResolve(*env, {"."}), cwd);
   EXPECT_EQ(PathResolve(*env, {"//server/share", "..", "relative\\"}),
             "\\\\server\\share\\relative");
   EXPECT_EQ(PathResolve(*env, {"c:/", "//"}), "c:\\");
@@ -337,8 +338,8 @@ TEST_F(UtilTest, PathResolve) {
 #else
   EXPECT_EQ(PathResolve(*env, {"/var/lib", "../", "file/"}), "/var/file");
   EXPECT_EQ(PathResolve(*env, {"/var/lib", "/../", "file/"}), "/file");
-  EXPECT_EQ(PathResolve(*env, {"a/b/c/", "../../.."}), (*env)->GetCwd((*env)->exec_path()));
-  EXPECT_EQ(PathResolve(*env, {"."}), (*env)->GetCwd((*env)->exec_path()));
+  EXPECT_EQ(PathResolve(*env, {"a/b/c/", "../../.."}), cwd);
+  EXPECT_EQ(PathResolve(*env, {"."}), cwd);
   EXPECT_EQ(PathResolve(*env, {"/some/dir", ".", "/absolute/"}), "/absolute");
   EXPECT_EQ(PathResolve(*env, {"/foo/tmp.3/", "../tmp.3/cycles/root.js"}),
             "/foo/tmp.3/cycles/root.js");

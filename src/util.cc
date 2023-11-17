@@ -703,28 +703,24 @@ RAIIIsolate::RAIIIsolate(const SnapshotData* data)
 RAIIIsolate::~RAIIIsolate() {}
 
 #ifdef _WIN32
-// windows
-
-bool IsPathSeparator(const char c) {
+bool IsPathSeparator(const char c) noexcept {
   return c == '\\' || c == '/';
 }
-#else
-// posix
-
-bool IsPathSeparator(const char c) {
+#else   // POSIX
+bool IsPathSeparator(const char c) noexcept {
   return c == '/';
 }
-#endif
+#endif  // _WIN32
 
-std::string NormalizeString(const std::string path,
+std::string NormalizeString(const std::string_view path,
                             bool allowAboveRoot,
-                            const std::string separator) {
-  std::string res = "";
+                            const std::string_view separator) {
+  std::string res;
   int lastSegmentLength = 0;
   int lastSlash = -1;
   int dots = 0;
   char code;
-  const auto pathLen = path.length();
+  const auto pathLen = path.size();
   for (uint8_t i = 0; i <= pathLen; ++i) {
     if (i < pathLen) {
       code = path[i];
@@ -764,12 +760,13 @@ std::string NormalizeString(const std::string path,
         }
 
         if (allowAboveRoot) {
-          res += res.length() > 0 ? separator + ".." : "..";
+          res += res.length() > 0 ? std::string(separator) + ".." : "..";
           lastSegmentLength = 2;
         }
       } else {
-        if (res.length() > 0) {
-          res += separator + path.substr(lastSlash + 1, i - (lastSlash + 1));
+        if (!res.empty()) {
+          res += std::string(separator) +
+                 std::string(path.substr(lastSlash + 1, i - (lastSlash + 1)));
         } else {
           res = path.substr(lastSlash + 1, i - (lastSlash + 1));
         }
@@ -788,9 +785,7 @@ std::string NormalizeString(const std::string path,
 }
 
 #ifdef _WIN32
-// windows
-
-bool IsWindowsDeviceRoot(const char c) {
+bool IsWindowsDeviceRoot(const char c) const noexcept {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
@@ -800,14 +795,14 @@ std::string PathResolve(Environment* env,
   std::string resolvedTail = "";
   bool resolvedAbsolute = false;
   const size_t numArgs = paths.size();
+  auto cwd = env->GetCwd(env->exec_path());
 
   for (int i = numArgs - 1; i >= -1 && !resolvedAbsolute; i--) {
-    std::string path = "";
+    std::string path;
     if (i >= 0) {
       path = std::string(paths[i]);
-
     } else if (resolvedDevice.empty()) {
-      path = env->GetCwd();
+      path = cwd;
     } else {
       // Windows has the concept of drive-specific current working
       // directories. If we've resolved a drive letter but not yet an
@@ -817,7 +812,7 @@ std::string PathResolve(Environment* env,
       std::string resolvedDevicePath;
       const std::string envvar = "=" + resolvedDevice;
       credentials::SafeGetenv(envvar.c_str(), &resolvedDevicePath);
-      path = resolvedDevicePath.empty() ? env->GetCwd() : resolvedDevicePath;
+      path = resolvedDevicePath.empty() ? cwd : resolvedDevicePath;
 
       // Verify that a cwd was found and that it actually points
       // to our drive. If not, default to the drive's root.
@@ -932,32 +927,39 @@ std::string PathResolve(Environment* env,
 
   return ".";
 }
-#else
-// posix
+#else   // _WIN32
 std::string PathResolve(Environment* env,
                         const std::vector<std::string_view>& paths) {
-  std::string resolvedPath = "";
+  std::string resolvedPath;
   bool resolvedAbsolute = false;
-  const size_t numArgs = paths.size();
+  auto cwd = env->GetCwd(env->exec_path());
 
   for (int i = numArgs - 1; i >= -1 && !resolvedAbsolute; i--) {
     const std::string& path = (i >= 0) ? std::string(paths[i]) : env->GetCwd(env->exec_path());
     /* validateString(path, "paths[" + std::to_string(i) + "]"); */
 
     if (!path.empty()) {
-      resolvedPath = std::string(path + "/" + resolvedPath);
-      resolvedAbsolute = (path[0] == '/');
+      resolvedPath = std::string(path) + "/" + resolvedPath;
+
+      if (path.front() == '/') {
+        resolvedAbsolute = true;
+        break;
+      }
     }
   }
 
   // Normalize the path
-  resolvedPath = NormalizeString(resolvedPath, !resolvedAbsolute, "/");
+  auto normalizedPath = NormalizeString(resolvedPath, !resolvedAbsolute, "/");
 
   if (resolvedAbsolute) {
-    return "/" + resolvedPath;
+    return "/" + normalizedPath;
   }
-  return (!resolvedPath.empty()) ? resolvedPath : ".";
-}
-#endif
 
+  if (normalizedPath.empty()) {
+    return ".";
+  }
+
+  return normalizedPath;
+}
+#endif  // _WIN32
 }  // namespace node

@@ -999,14 +999,14 @@ class RAIIIsolate {
 class Environment;
 
 #ifdef _WIN32
-bool IsWindowsDeviceRoot(const char c);
-#endif
+bool IsWindowsDeviceRoot(const char c) const noexcept;
+#endif  // _WIN32
 
-bool IsPathSeparator(const char c);
+bool IsPathSeparator(const char c) noexcept;
 
-std::string NormalizeString(const std::string path,
+std::string NormalizeString(const std::string_view path,
                             bool allowAboveRoot,
-                            const std::string separator);
+                            const std::string_view separator);
 
 std::string PathResolve(Environment* env,
                         const std::vector<std::string_view>& args);
