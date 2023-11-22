@@ -785,7 +785,7 @@ std::string NormalizeString(const std::string_view path,
 }
 
 #ifdef _WIN32
-bool IsWindowsDeviceRoot(const char c) const noexcept {
+bool IsWindowsDeviceRoot(const char c) noexcept {
   return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
@@ -933,9 +933,11 @@ std::string PathResolve(Environment* env,
   std::string resolvedPath;
   bool resolvedAbsolute = false;
   auto cwd = env->GetCwd(env->exec_path());
+  const size_t numArgs = paths.size();
 
   for (int i = numArgs - 1; i >= -1 && !resolvedAbsolute; i--) {
-    const std::string& path = (i >= 0) ? std::string(paths[i]) : env->GetCwd(env->exec_path());
+    const std::string& path =
+        (i >= 0) ? std::string(paths[i]) : env->GetCwd(env->exec_path());
     /* validateString(path, "paths[" + std::to_string(i) + "]"); */
 
     if (!path.empty()) {

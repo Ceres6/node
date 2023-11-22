@@ -131,7 +131,7 @@ void FSPermission::Apply(Environment* env,
       }
       return;
     }
-    GrantAccess(scope, PathResolve(env, { res }));
+    GrantAccess(scope, PathResolve(env, {res}));
   }
 }
 
